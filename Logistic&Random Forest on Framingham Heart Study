@@ -41,7 +41,7 @@ cor$r
 pearson <- corrplot(cor$r,method = 'color',color='cmap',tl.cex = 0.8,number.cex = 0.6, tl.srt=45, cl.pos='n',
                     type = 'lower',title = "Correlation between continous variables",
                     addCoef.col = 'black', tl.col="black", mar=c(0,0,1,0),p.mat = cor$P,sig.level = c(.001, .01, .05))
-[[https://github.com/yizhoulu599/pictures/blob/d9642be108e997e543f807c10615904d6c2c2107/Pearson.png]]
+[[https://github.com/yizhoulu599/pictures/blob/d9642be108e997e543f807c10615904d6c2c2107/Pearson.png]|alt=octocat]
 
 #Tetrashoric correlation on binary variables
 df1<- df%>% select("sex","currentSmoker", "BPMeds", "prevalentStroke", "prevalentHyp", "diabetes", "TenYearCHD")
