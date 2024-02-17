@@ -1,0 +1,188 @@
+###Predicting 10-Year Risk of Coronary Heart Disease Using Logistic Regression: Insights from the Framingham Heart Study###
+library()
+df <- read.csv("")
+colnames(df)[1] ="sex" #rename column
+
+#test and train
+set.seed(12345)
+sample <- sample(c(TRUE, FALSE), nrow(df), replace=TRUE, prob=c(0.5,0.5))
+df_train <- df[sample, ]
+df_test <- df[!sample, ] 
+
+#check distribution of age
+ggplot(df,aes(x=age)) + 
+  geom_histogram(position = "identity",alpha=0.5,color="white",fill=('#3399FF')) +
+  theme_minimal()+ 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                         panel.background = element_blank(),axis.text.x = element_text(angle = 45, vjust = 1, hjust=1), axis.line = element_line(colour = "black"),plot.title = element_text(hjust=0.5)) + 
+  labs(title = "Distribution of Age", x= "Age(yrs)",y="Count")
+
+#check proportion of TenYearCHD
+df$TenYearCHD <- ifelse(df$TenYearCHD == 1,"Yes","No")
+ggplot(aes(x=TenYearCHD),data=df) + 
+  geom_bar(fill="#3399FF",width = 0.3)+
+  geom_text(stat='count',aes(label=scales::percent(..count../sum(..count..)))
+            , color="white", size=3.5,position=position_stack(0.5))+
+  scale_fill_brewer(palette = "Spectral") + 
+  theme_minimal()
+
+#categorize BMI into 'underweight', 'health weight', 'overweight', 'obesity'
+df <- df %>% mutate(clasi_wgt = case_when(BMI < 18.5 ~ "0",
+                                         BMI < 25 ~ "1",
+                                         BMI < 30 ~ "2",
+                                         BMI >= 30 ~ "3"))
+
+#Person's correlation on continuous variables
+continous_vars <- df %>% 
+  dplyr::select("age","cigsPerDay","totChol","sysBP","diaBP","BMI",
+                "heartRate","glucose")
+cor <- rcorr(as.matrix(continous_vars))
+cor$r
+pearson <- corrplot(cor$r,method = 'color',color='cmap',tl.cex = 0.8,number.cex = 0.6, tl.srt=45, cl.pos='n',
+                    type = 'lower',title = "Correlation between continous variables",
+                    addCoef.col = 'black', tl.col="black", mar=c(0,0,1,0),p.mat = cor$P,sig.level = c(.001, .01, .05))
+
+
+#Tetrashoric correlation on binary variables
+df1<- df%>% select("sex","currentSmoker", "BPMeds", "prevalentStroke", "prevalentHyp", "diabetes", "TenYearCHD")
+df1 <- lapply(df1,as.numeric)
+
+tetra <- tetrachoric(df1)
+tetra
+corrplot(tetra$rho, method = 'color', tl.cex = 0.8,number.cex = 0.6, tl.srt=45,
+         cl.pos='n',
+         type = 'lower',title = "Tetrachoric correlation",
+         addCoef.col = 'black', tl.col="black", mar=c(0,0,1,0),p.mat = tetra$P,sig.level = c(.001, .01, .05))
+
+#qqplot normality check
+qqnorm(df$age,pch=1, frame=FALSE)
+qqline(df$age, col = "#3399FF", lwd = 2)
+
+#descriptive statistics and export
+res <- descrTable(TenYearCHD~.,data= df,show.p.overall = TRUE,method = "1",sd.type = "2")
+export2word(res, file = "compare.docx")
+export2pdf(res, file = "compare.pdf")
+
+#model selection
+model_full <- glm(TenYearCHD~sex + age + education + cigsPerDay + prevalentStroke + 
+                       prevalentHyp + diabetes + totChol + sysBP + BMI + glucose ,data = df_train1, family=binomial)
+
+
+step.model <- stepAIC(model_full,direction = "both")
+summary(step.model)
+summ(step.model.exp=TRUE)
+
+#test data, AUC,ROC curve
+prediction <- predict(model_best,df_test,type = "response")
+#auc
+roc_object <- roc(df_test$TenYearCHD,prediction)
+Sensitivity <- roc_object$sensitivities
+Specificity <- roc_object$specificities
+Threshold <- roc_object$thresholds
+roc_data <- data.frame(Threshold = roc_object$thresholds,
+                       Sensitivity = roc_object$sensitivities,
+                       Specificity = roc_object$specificities)
+write.csv(roc_data,"C:/Users/Lu/Desktop/1.csv")
+auc(roc_object)
+plot.roc(roc_object, main="ROC curve -- Logistic Regression")
+roc
+
+#calculate AUC manually
+model_best <- glm(TenYearCHD ~ sex + age + cigsPerDay + 
+                    sysBP + glucose, data = df_train1, family=binomial)
+# Assume that 'probabilities' contains the predicted probabilities from your model
+# and 'test_labels' contains the actual binary outcomes
+probabilities <- predict(model_best, newdata = df_test, type = "response")
+test_labels <- df_test$TenYearCHD
+
+# Sort the data by predicted probabilities
+order_indices <- order(probabilities, decreasing = TRUE)
+sorted_test_labels <- test_labels[order_indices]
+sorted_probabilities <- probabilities[order_indices]
+
+# Initialize vectors to store TPR and FPR values
+tpr_values <- c()
+fpr_values <- c()
+
+# Calculate the number of positive and negative cases
+n_positives <- sum(test_labels)
+n_negatives <- length(test_labels) - n_positives
+
+# Initialize counters for true positives and false positives
+tp <- 0
+fp <- 0
+
+# Iterate through sorted probabilities and their corresponding true labels
+for (i in seq_along(sorted_test_labels)) {
+  if (sorted_test_labels[i] == 1) {
+    tp <- tp + 1
+  } else {
+    fp <- fp + 1
+  }
+  tpr_values <- c(tpr_values, tp / n_positives)
+  fpr_values <- c(fpr_values, fp / n_negatives)
+}
+
+# Compute the AUC using the trapezoidal rule
+auc_manual <- 0
+for (i in 2:length(tpr_values)) {
+  auc_manual <- auc_manual + (fpr_values[i] - fpr_values[i-1]) * (tpr_values[i] + tpr_values[i-1]) / 2
+}
+
+# Take the absolute value to ensure AUC is between 0 and 1
+auc_manual <- abs(auc_manual)
+auc_manual
+#random forest claasifier
+df <- na.omit(df)
+df$TenYearCHD <- as.factor(df$TenYearCHD)
+set.seed(12345)
+trainIndex <- createDataPartition(df$TenYearCHD, p = 0.5, list = FALSE)
+train_set <- df[trainIndex,]
+test_set <- df[-trainIndex,]
+train_set <- na.omit(train_set)
+names  <- names(train_set)
+rndfor <- randomForest(TenYearCHD ~ ., data=train_set, ntree=500)
+rndfor <- randomForest(f_full,data= train_set,importance = T, nodesize =5, ntree = 500)
+rndfor
+plot(rndfor, main= "Error measurement")
+legend("topright", c('Out-of-bag',"1","0"), lty=1, col=c("black","green","red"))
+
+rndfor2 <- randomForest(f_full,data= train_set,importance = T, nodesize =5, ntree = 50)
+rndfor2
+rndfor2 <- randomForest(TenYearCHD ~ ., data=train_set, ntree=50)
+plot(rndfor2, main= "Error measurement")
+legend("topright", c('Out-of-bag',"1","0"), lty=1, col=c("black","green","red"))
+varImpPlot(rndfor2, sort= T, main = "Importance of Variable")
+
+
+rndfor2.prob.train <- predict(rndfor2, type = "prob")[,2]
+rndfor2.prob.test  <- predict(rndfor2,newdata = test_set, type = "prob")[,2]
+hist(rndfor2.prob.test, breaks = 25, col = "lightblue",xlab= "Probabilities",
+     ylab= "Frequency",main= "Random Forest")
+boxplot(rndfor2.prob.test ~ test_set$TenYearCHD,col= c("green", "red"), horizontal= T)
+
+y_true <- test_set$TenYearCHD
+y_true <- as.numeric(y_true)
+roc_obj <- roc(response = test_set$TenYearCHD, predictor = rndfor2.prob.test )
+auc_value <- auc(roc_obj)
+print(auc_value)
+
+length(y_true)
+length(rndfor2.prob.test)
+class(y_true)
+
+#multiple imputation
+#https://dept.stat.lsa.umich.edu/~jerrick/courses/stat701/notes/mi.html
+df1 <- mice(df, m=5, method='pmm', seed=123)
+# Assuming 'imputed_data' is the object returned by the mice() function
+# and 'your_analysis_formula' is the formula for your statistical model (e.g., lm, glm)
+
+# Step 2: Analyze each imputed dataset
+analysis_results <- with(data = df1, exp = glm(TenYearCHD ~ male + age + cigsPerDay + 
+                                                 sysBP + glucose, family=binomial))
+
+# Step 3: Pool the results
+pooled_results <- pool(analysis_results)
+
+# Step 4: Summarize the pooled results
+summary(pooled_results)
