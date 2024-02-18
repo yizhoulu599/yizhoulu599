@@ -78,11 +78,11 @@ set price(OBS=15 FIRSTOBS=7);
 run;
 
 #PROC SORT
-proc sort data=mylib.cust;
+PROC SORT data=mylib.cust;
 by descending country transaction_amount; #sort decreasing by country and transaction_amount
 run;
 
-proc sort data=mylib.cust NODUP OUT=sorted
+PROC SORT data=mylib.cust NODUP OUT=sorted
 OUT:Produce the modified data in separate table
 ASCENDING/DESCENDING:Specifying the order of sorting
 NODUPKEY:Delete observations with common values in "BY" variables
@@ -109,4 +109,8 @@ PROC TRANSPOSE data=inputdata prefix=trans_ suffix=_done out=outputdata(drop=_:)
 by city(the value do not transform); by contactname;
 id country(needs to be transformed); by city country;
 var transaction_amount(as values);
+run;
+
+#PROC CONTENTS:Displays the contents of a table or library
+PROC CONTENTS sashelp.cars VARNUM; #list varialbes in the order of their logical position in the data
 run;
