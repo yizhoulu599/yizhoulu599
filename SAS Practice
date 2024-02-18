@@ -104,4 +104,9 @@ tables city * country/nopercent nocum nocol(optional);#first dimension * second 
 where transaction_amount >=500;
 run;
 
-
+#PROC TRANSPOSE: Transformation from observations to variables and vice versa/Transposing Data Rows to Columns
+PROC TRANSPOSE data=inputdata prefix=trans_ suffix=_done out=outputdata(drop=_:); #add prefix suffix to transformed name 
+by city(the value do not transform); by contactname;
+id country(needs to be transformed); by city country;
+var transaction_amount(as values);
+run;
