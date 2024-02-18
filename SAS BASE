@@ -1,0 +1,107 @@
+#####SAS Practice
+
+
+##create a Table in SAS
+data table;
+input employee $6. salary; # $ - character variable
+datalines;
+alice 78945
+john 45641
+michalle 45617
+;
+run;
+
+#creat new library
+data NEWLIB.table
+
+#import a Microsoft Excel
+proc import datafile="path/.xlsx'
+            out=name
+            dbms=xlsx;
+            sheet="name";
+run;
+
+#read existing table in SAS
+libname inlib "path"
+
+data test;
+set inlib.categories;
+run;
+
+#create new variable
+data test;
+set mylib.orderdetails;
+price=quantity*5;
+run;
+
+#rename and drop a variable
+rename oldname=newname;
+drop ID;
+run;
+
+#filter data
+data testing;
+set lib.customers2;
+where country='USA' and(or) transaction_amount > 600;
+run;
+
+#IF THEN ELSE conditional statement in SAS
+data test;
+set lib.customers;
+if transaction_amount <500 then category = "below average";
+else category = "above avarage";
+run;
+
+if transaction_amount <500 then category = "below average";
+else if transaction_amount >=500 and transaction_amount < 699 then category = "premium";
+else category = "elite";
+run;
+
+#Output, Keep, Drop, Firstobs, OBS
+data keeps;
+set sashelp.cars(keep=model type msrp);
+run;
+
+data price(keep=model type msrp) features(drop=model type msrp);
+set sashelp.cars;
+if msrp <19000 then output price;
+else output featuresl
+run;
+
+data line_number;
+set price;
+if _N_ >=10 AND _N_<20; #Line 10~20
+run;
+
+set price(OBS=15);
+set price(OBS=15 FIRSTOBS=7);
+run;
+
+#PROC SORT
+proc sort data=mylib.cust;
+by descending country transaction_amount; #sort decreasing by country and transaction_amount
+run;
+
+proc sort data=mylib.cust NODUP OUT=sorted
+OUT:Produce the modified data in separate table
+ASCENDING/DESCENDING:Specifying the order of sorting
+NODUPKEY:Delete observations with common values in "BY" variables
+NODUP: Delete observastions with common values in all the varaibles
+DUPOUT: Produce the duplicate values, identified by NODUPKEY/NODUP, in a separate table
+
+proc sort data=mylib.cust nodupkey out=sorted;#remove duplicated value by country
+by country;/#by _all_
+run;
+
+#PROC FREQ (NOCUM, NOCOL, NOPERCENT)
+PROC FREQ data=mydata;
+tables city/nopercent nocum(optional);
+run;
+
+Two dimension Freq. Report
+PROC FREQ data=mydata;
+tables city * country/nopercent nocum nocol(optional);#first dimension * second dimension
+where transaction_amount >=500;
+run;
+
+
