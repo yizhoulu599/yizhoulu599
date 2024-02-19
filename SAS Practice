@@ -157,3 +157,16 @@ CAPITALS=upcase(name);
 small=lowcase(name);
 sentence=propcase(capitals);
 run;
+
+#PROC SQL
+PROC SQL;
+SELECT type, 
+sum(INVOICE) as total_INVOICE, 
+count(type) as number_of_unit
+ FROM SASHELP.CARS
+/*WHERE  weight >=5000*/
+group by type
+having number_of_unit <=50
+order by number_of_unit desc
+;
+QUIT;
