@@ -111,6 +111,23 @@ id country(needs to be transformed); by city country;
 var transaction_amount(as values);
 run;
 
+#Character functions-1/compress,compbl#removing the blanks(leading, trailing, in between)
+
 #PROC CONTENTS:Displays the contents of a table or library
 PROC CONTENTS sashelp.cars VARNUM; #list varialbes in the order of their logical position in the data
+run;
+
+#compress,compbl(leading, trailing, inbetween)
+data sample;
+name="thomas   cruise  mapothe";
+len=length(name);
+compress=compress(name);
+len1=length(compress);
+compbl=compbl(name0;
+len2=length(compbl);
+run;
+
+data sample2;
+value="asdajskljioewm4564891:%";
+new=compress(value,"a","modifier");
 run;
