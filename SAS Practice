@@ -131,3 +131,29 @@ data sample2;
 value="asdajskljioewm4564891:%";
 new=compress(value,"a","modifier");
 run;
+
+#concatenation ||,cat,catx,cats,catt
+data sample;
+firstname="thomas";
+middlename="cruise";
+lastname="mapother";
+fullname=firstname||" "||middlename||" "||lastname;
+fullname2=cat(firstname,middlename,lastname);
+fullname3=catx("",firstname,middlename,lastname);
+run;
+
+#SCAN: split text into columns
+data test;
+set inlib.namelist;
+firstname=scan(name,1,"_")
+middlename=scan(name,2,"_")
+lastname=scan(name,3,"_")
+lastname=scan(name,-1,"_")
+run;
+
+#SUBSTR,LOWCASE,UPCASE,PROPCASE
+SUBSTR(source,startingposition,numberofcharac);
+CAPITALS=upcase(name);
+small=lowcase(name);
+sentence=propcase(capitals);
+run;
