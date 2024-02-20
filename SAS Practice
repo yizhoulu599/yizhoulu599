@@ -158,7 +158,7 @@ small=lowcase(name);
 sentence=propcase(capitals);
 run;
 
-#PROC SQL-Select,Case when,Summary
+#PROC SQL-Select,Case when,Summary,Joins
 PROC SQL;
 SELECT type, 
 sum(INVOICE) as total_INVOICE, 
@@ -199,3 +199,32 @@ SELECT type
 FROM sashelp.cars
 group by 1,2;
 Quit;
+
+PROC SQL;
+select a.name
+       , a.sex
+       , a.age
+       , b.height
+       , b.weight
+
+from sashelp.class as a
+left join join sashelp.classfit as b
+on a.name=b.name;
+
+Quit;
+
+#####Left Join:
+#####Includes all rows from the left table and the matched rows from the right table.
+#####If there is no match, the result is NULL on the side of the right table.
+
+#####Right Join:
+#####Includes all rows from the right table and the matched rows from the left table.
+#####If there is no match, the result is NULL on the side of the left table.
+
+#####Inner Join:
+#####Includes rows that have matching values in both tables.
+#####Only the rows with matching keys in both the left and right tables are included in the result set.
+
+#####Full Join:
+#####Includes all rows from both the left and right tables.
+#####If there are rows in one table that do not have matches in the other, those rows are also included in the result set, with NULL values in the columns of the table where there is no match.
