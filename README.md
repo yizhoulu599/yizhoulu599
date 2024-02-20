@@ -33,7 +33,7 @@ I'm a recent graduate 🎓 passionate about data analysis and statistics, curren
 
 ## 🎯 Goals
 
-As I embark on my professional journey, I'm eager to apply my skills in SAS/R programming and biostatistics in a dynamic environment that challenges me to grow and contribute to meaningful projects. I'm particularly interested in roles that allow me to collaborate with cross-functional teams to solve complex data problems and make impactful decisions.
+As I embark on my professional journey, I'm eager to apply my skills in SAS/R programming and statistics in a dynamic environment that challenges me to grow and contribute to meaningful projects. I'm particularly interested in roles that allow me to collaborate with cross-functional teams to solve complex data problems and make impactful decisions.
 
 ## 📞 Let's Connect!
 
