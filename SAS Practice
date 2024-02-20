@@ -158,7 +158,7 @@ small=lowcase(name);
 sentence=propcase(capitals);
 run;
 
-#PROC SQL
+#PROC SQL-Select,Case when,Summary
 PROC SQL;
 SELECT type, 
 sum(INVOICE) as total_INVOICE, 
@@ -182,3 +182,20 @@ ELSE "NORMAL"
 END AS CATEGORY2
 FROM WORK.CLASS;
 QUIT;
+
+PROC SQL;
+SELECT type
+       , drivetrain
+       , count(*) as count_of_obs
+       , freq(type) as freq_of_obs
+       , n(type) as n_of_obs
+       , min(invoice) as min_invoice
+       , max(invoice) as max_invoice
+       , avg(invoice) as ave_invoice
+       , mean(invoice) as mean_invoice
+       , range(invoice) as range_of_invoice
+       , std(invoice) as std_of_invoice
+       , sum(invoice) as sum_of_invoice
+FROM sashelp.cars
+group by 1,2;
+Quit;
