@@ -14,10 +14,10 @@ I'm a recent graduate 🎓 passionate about data analysis and statistics, curren
 ## 💼 Skills
 
 - **Programming Languages:** SAS, R, Python
-- **Statistical Software:** SAS (Base, Stat, Macro), RStudio
+- **Statistical Software:** SAS (Base, Stat, Macro, SQL), RStudio
 - **Data Analysis:** Descriptive Statistics, Linear Regression, Survival Analysis, Longitudinal Analysis, R Shiny
 - **Visualization Tools:** SAS Visual Analytics, Python, GGplot2 in R
-- **Other Skills:** Data Cleaning, Data Manipulation, Report Writing
+- **Other Skills:** Data Cleaning, Data Manipulation, Report Writing, Machine Learning
 
 ## 🚀 Projects
 
