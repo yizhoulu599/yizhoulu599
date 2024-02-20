@@ -21,7 +21,7 @@ I'm a recent graduate 🎓 passionate about data analysis and statistics, curren
 
 ## 🚀 Projects
 
-### 2023 Hackathon for Health
+### 2023 Hackathon for Health（Held by CTSI,NMDSI,MCW)
 - The survival analysis to identify Obstructive Sleep Apnea affecting the Likelihood of Cancer Mortality on CTSI EHR Datasets.
 - The team I was on analysis the Likelihood of Cancer Mortality with effect of Sleep Apnea, which was 
   unanimous approved by the jury and professors, and won the 1st place. 
