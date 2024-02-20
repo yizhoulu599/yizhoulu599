@@ -213,6 +213,15 @@ on a.name=b.name;
 
 Quit;
 
+PROC SQL;
+create table mylib.combined as
+select a.*
+      ,b.height
+from work.personal_info as a
+cross join work.physical_info as b;
+quit;
+
+
 #####Left Join:
 #####Includes all rows from the left table and the matched rows from the right table.
 #####If there is no match, the result is NULL on the side of the right table.
