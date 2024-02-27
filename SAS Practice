@@ -258,3 +258,23 @@ if age<=12 then do;
  proc print data=class;
  run;
  
+#PROC REPORT
+proc report data=sashelp.cars OUT=cars;
+columns origin make type, (msrp invoice) diff;
+define origin/group;
+define make/group;
+define type/across;
+define msrp/'Avg of MSRP' mean;
+define invoice/'Avg of Invoice' sum;
+define diff/computed;
+
+
+BREAK after ORIGIN/SUMMARIZE;
+rbreak after/summarize;
+
+compute diff;
+diff=_c3_ - _c4_;
+endcomp;
+
+where UPCASE(ORIGIN) in ('ASIA','EUROPE');
+run;
