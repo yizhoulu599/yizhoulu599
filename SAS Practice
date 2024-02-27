@@ -237,3 +237,24 @@ quit;
 #####Full Join:
 #####Includes all rows from both the left and right tables.
 #####If there are rows in one table that do not have matches in the other, those rows are also included in the result set, with NULL values in the columns of the table where there is no match.
+
+#Loop
+data class;
+set sashelp.class;
+format stay category $30.;
+
+if age<=12 then do;
+ fee = "15k";
+ stay = "allowd";
+ category = "kid";
+ end;
+ 
+ else do;
+  fee = "25k";
+  stay = "not allowed";
+  category = "tennage";
+ end;
+ run;
+ proc print data=class;
+ run;
+ 
