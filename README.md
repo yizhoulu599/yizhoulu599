@@ -24,12 +24,15 @@ I'm a recent graduate 🎓 passionate about data analysis and statistics, curren
 ### 2023 Hackathon for Health（Held by CTSI,NMDSI,MCW)
 - The survival analysis to identify Obstructive Sleep Apnea affecting the Likelihood of Cancer Mortality on CTSI EHR Datasets.
 - The team I was on analysis the Likelihood of Cancer Mortality with effect of Sleep Apnea, which was 
-  unanimous approved by the jury and professors, and won the 1st place. 
+  unanimous approved by the jury and professors, and won the 1st place.
+- Conducted survival analysis to identify OSA affecting the Likelihood of Cancer Mortality on CTSI datasets, employing the Kaplan-Meier method using proc lifetest and the Cox proportional hazard model using proc phreg to examine time-to- 
+  event data. (e.g. death, hospitalization).
 
 
-### R Shiny app
-- Build a R Shiny App to Perform Data Manipulation on NCDB Datasets
-- This tool enables users to interactively explore, process, and visualize data, significantly enhancing the accessibility and usability of NCDB information for research and clinical purposes.
+### Southeast Wisconsin Data Science Collaborative Research Symposium (R Shiny App)
+- Using Python and RStudio, I designed a Shiny app that allows individuals without a coding background to perform data cleaning and visualization. Additionally, the app incorporates the OpenAI API, enabling users to interact with the 
+  data through natural language processing. This integration not only simplifies complex data analysis tasks but also enhances accessibility, making it easier for users to gain insights from their data without the need for programming 
+  expertise.
 
 ## 🎯 Goals
 
