@@ -1,0 +1,114 @@
+
+data <- read_excel("/df.xlsx")
+plot_pattern(data,square = TRUE,rotate = TRUE,npat = 7)
+data <- na.omit(data)
+data$Year <- as.factor(data$Year)
+
+unique(data$Year)
+unique(data$人群分类)
+unique(data$疾病名称)
+unique(data$病例分类)
+
+data <- data %>%
+  mutate(人群分类 = str_replace(人群分类, "^其他:.*$", "其他"))
+data <- data %>%
+  filter(人群分类 != "不详")
+#df1 <-  data[1:100,]
+#writexl::write_xlsx(df1,"template.xlsx")
+#2005-2010,2011-2023
+
+
+##########################
+
+summary_data <- data %>%
+  group_by(Year, 疾病名称) %>%
+  summarise(Cases = n(), .groups = 'drop')
+
+
+wide_data <- summary_data %>%
+  pivot_wider(names_from = 疾病名称, values_from = Cases, values_fill = list(Cases = 0))
+
+
+wide_data <- wide_data %>%
+  mutate(合计 = rowSums(select(., -Year)))
+
+
+data_2005_2010 <- wide_data %>% filter(Year %in% 2005:2010)
+data_2011_2023 <- wide_data %>% filter(Year %in% 2011:2023)
+
+
+total_2005_2010 <- data_2005_2010 %>%
+  summarise(across(-Year, sum, na.rm = TRUE)) %>%
+  mutate(Year = "2005-2010 合计")
+
+total_2011_2023 <- data_2011_2023 %>%
+  summarise(across(-Year, sum, na.rm = TRUE)) %>%
+  mutate(Year = "2011-2023 合计")
+
+
+final_data_2005_2010 <- bind_rows(data_2005_2010, total_2005_2010)
+final_data_2011_2023 <- bind_rows(data_2011_2023, total_2011_2023)
+
+final_data <- bind_rows(final_data_2005_2010, final_data_2011_2023)
+
+ft <- flextable(final_data)
+
+# You can add formatting options like this:
+ft <- set_table_properties(ft, width = 0.8, layout = "autofit")
+
+# Apply a theme or manually format headers and values
+ft <- theme_box(ft)
+ft <- bold(ft, part = "header")  # Make headers bold
+ft <- autofit(ft)
+writexl::write_xlsx(final_data,"ft.xlsx")
+####################################
+data <- data %>%
+  mutate(职业分类 = case_when(
+    人群分类 %in% c("农民") ~ "农民",
+    人群分类 %in% c("民工", "工人", "海员及长途驾驶员") ~ "工人",
+    人群分类 %in% c("干部职员") ~ "干部职员",
+    人群分类 %in% c("散居儿童", "学生", "幼托儿童", "教师") ~ "学生",
+    人群分类 %in% c("家务及待业") ~ "家务及待业",
+    人群分类 %in% c("离退人员") ~ "离退人员",
+    人群分类 %in% c("商业服务", "公共场所服务员", "餐饮食品业") ~ "商业服务",
+    TRUE ~ "其他"  
+  ))
+
+data$Year <- as.numeric(data$Year)
+data$Gender <- as.factor(data$Gender)
+data$职业分类 <- as.factor(data$职业分类)
+
+ds <- data %>% mutate(Cate = case_when(Year <= 2010 ~ "0",
+                                       Year > 2010 ~ "1"))
+res <- descrTable(Cate~.,data= ds)
+createTable(res, show.ratio=TRUE)
+export2word(res, file = "compare.docx")
+#####################################
+sapply(data,class)
+
+monthly_cases <- data %>%
+  dplyr::mutate(Period = ifelse(Year >= 2005 & Year <= 2010, "2005-2010", "2011-2023")) %>%
+  dplyr::group_by(Period, month) %>%
+  dplyr::summarize(Cases = n(), .groups = "drop")
+
+better_colors <- c("2005-2010" = "#FC4E07", "2011-2023" = "#00BFC4")
+
+
+ggplot(monthly_cases, aes(x = month, y = Cases, color = Period, group = Period)) +
+  geom_line(size = 1.2) +  
+  geom_point(size = 3, shape = 21, fill = "white") + 
+  scale_x_continuous(breaks = 1:12, labels = 1:12) + 
+  scale_color_manual(values = better_colors) + 
+  labs(
+    title = "Monthly Malaria Cases by Period",
+    x = "Month",
+    y = "Number of Cases",
+    color = "Period"
+  ) +
+  theme_minimal(base_size = 14) + 
+  theme(
+    panel.grid.major = element_line(color = "gray80", linetype = "dotted"),  
+    panel.grid.minor = element_blank(),  
+    plot.title = element_text(face = "bold"),  
+    legend.position = "top"  #
+  )
