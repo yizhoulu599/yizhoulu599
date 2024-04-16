@@ -112,3 +112,36 @@ ggplot(monthly_cases, aes(x = month, y = Cases, color = Period, group = Period))
     plot.title = element_text(face = "bold"),  
     legend.position = "top"  #
   )
+
+################################
+separate value by commma and mutate into 4 columns by ID
+library(tidyr)
+library(dplyr)
+library(stringr)
+df <- read_excel("C:/Desktop/df.xlsx")
+colnames(df)
+
+df_new <- df %>%
+  separate(dia, into = paste("dia", 1:4, sep="_"), sep = "，")
+print(df_new)
+
+build a 'drug map' to replace certain value in the data
+drug_map <- c("非洛地平" = "CCB",
+              "缬沙坦" = "ARB",
+              "替米沙坦氢氯噻嗪" = "复方",
+              "苯磺酸左氨氯地平" = "CCB",
+              "厄贝沙坦" = "ARB",
+              "缬沙坦氢氯噻嗪" = "复方",
+              "琥珀酸美托洛尔" = "β-受体阻滞剂",
+              "坎地氢噻" = "复方",
+              "苯磺酸氨氯地平" = "CCB",
+              "马来酸左氨氯地平" = "CCB",
+              "厄贝沙坦氢氯噻嗪" = "复方",
+              "酒石酸美托洛尔" = "β-受体阻滞剂",
+              "氯沙坦钾氢氯噻嗪" = "复方",
+              "卡维地洛" = "β-受体阻滞剂",
+              "硝苯地平" = "CCB",
+              "吲达帕胺" = "利尿药",
+              "替米沙坦" = "ARB")
+df_chai <- df_new %>%
+  mutate(across(starts_with("dia"), ~str_replace_all(., drug_map)))
