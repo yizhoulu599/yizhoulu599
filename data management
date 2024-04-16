@@ -33,6 +33,7 @@ wide_data <- wide_data %>%
   mutate(合计 = rowSums(select(., -Year)))
 
 
+
 data_2005_2010 <- wide_data %>% filter(Year %in% 2005:2010)
 data_2011_2023 <- wide_data %>% filter(Year %in% 2011:2023)
 
@@ -145,3 +146,49 @@ drug_map <- c("非洛地平" = "CCB",
               "替米沙坦" = "ARB")
 df_chai <- df_new %>%
   mutate(across(starts_with("dia"), ~str_replace_all(., drug_map)))
+# add value wtih '+' then calculate freq and percentage
+df <- df %>%
+  mutate(dia_combined = pmap_chr(select(., dia_1:dia_4), ~ paste(sort(c(...)), collapse = "+"))) %>%
+  mutate(dia_combined = gsub("\\+NA|NA\\+|\\+$", "", dia_combined))
+
+df_summary <- df %>%
+  count(dia_combined) %>%
+  mutate(percentage = round(n / sum(n) * 100, 2)) %>%
+  arrange(desc(n))
+
+df_summary <- rbind(df_summary, data.frame(dia_combined = "Total", n = sum(df_summary$n), percentage = 100))
+
+colnames(df_summary) <- c("药物组合", "频数", "百分比(%)")
+
+
+strata <- list("Overall" = df)
+
+labels <- list(
+  variables = list(dia_combined = "药物组合")
+)
+
+table1_output <- capture.output(table1(strata, labels, groupspan = c(1)))
+
+table1_html <- paste0("<table>", paste0(table1_output, collapse = ""), "</table>")
+
+cat(table1_html)
+###
+
+drugs <- c("复方", "CCB", "ARB", "β-受体阻滞剂", "利尿剂")
+
+df_freq <- df %>%
+  select(starts_with("dia_")) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  filter(value %in% drugs)
+
+strata <- list("Overall" = df_freq)
+
+labels <- list(
+  variables = list(value = "药物")
+)
+
+table1_output <- capture.output(table1(strata, labels, groupspan = c(1)))
+
+table1_html <- paste0("<table>", paste0(table1_output, collapse = ""), "</table>")
+
+cat(table1_html)
