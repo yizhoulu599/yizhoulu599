@@ -192,3 +192,74 @@ table1_output <- capture.output(table1(strata, labels, groupspan = c(1)))
 table1_html <- paste0("<table>", paste0(table1_output, collapse = ""), "</table>")
 
 cat(table1_html)
+######################################
+library(readxl)
+library(dplyr)
+library(tidyr)
+
+total <- read_excel("C:/Users/Lu/Desktop/chim/total.xlsx")
+qm <- read_excel("C:/Users/Lu/Desktop/chim/qm.xlsx")
+total_updated <- total %>%
+  left_join(qm, by = "姓名") 
+
+writexl::write_xlsx(total_updated,"df.xlsx")
+
+####################################
+df <- read_excel("C:/Users/Lu/Desktop/chim/df.xlsx")
+df <- df %>%
+  mutate(across(c(期中卷分, 期末卷分), ~replace_na(., 0)))
+df <- df %>%
+  mutate(总分 = 期中卷分 * 0.4 + 期末卷分 * 0.6)
+
+df <- df %>%
+  arrange(desc(总分))
+
+
+threshold_A <- quantile(df$总分, probs = 0.67, type = 1)  # Top 33%
+threshold_B <- quantile(df$总分, probs = 0.33, type = 1)  # Next 33%
+
+# Create a new column 'Grade' based on these thresholds
+df <- df %>%
+  mutate(Grade = case_when(
+    总分 > threshold_A ~ 'A',
+    总分 > threshold_B ~ 'B',
+    TRUE ~ 'C'
+  ))
+colnames(df)
+
+df <- df %>%
+  mutate(期中名次 = rank(-期中卷分, ties.method = "min"),  # Rank for mid-term scores, "-" for descending order
+         期末名次 = rank(-期末卷分, ties.method = "min"),  # Rank for final exam scores
+         总分名次 = rank(-总分, ties.method = "min"))     # Rank for total scores
+writexl::write_xlsx(df,"final.xlsx")
+# View the first few rows to verify the new rank columns
+head(df)
+
+data <- read_excel("C:/Users/Lu/Desktop/chim/df_total.xlsx")
+clean_data <- data %>% select(班级, 姓名, 期中卷分, 期末卷分, 总分)
+
+# 计算每个班级的平均分
+class_averages <- clean_data %>%
+  group_by(班级) %>%
+  summarise(期中平均分 = mean(期中卷分), 期末平均分 = mean(期末卷分), 总分平均分 = mean(总分))
+
+# 绘制柱状图
+ggplot(class_averages, aes(x = 班级)) +
+  geom_bar(aes(y = 期中平均分), stat = "identity", fill = "blue", position = position_dodge()) +
+  geom_bar(aes(y = 期末平均分), stat = "identity", fill = "red", position = position_dodge()) +
+  labs(title = "各班级期中与期末平均分数比较", x = "班级", y = "平均分数") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+long_data <- clean_data %>%
+  pivot_longer(cols = c(期中卷分, 期末卷分), names_to = "考试", values_to = "分数")
+
+# 绘制箱线图
+a <- ggplot(long_data, aes(x = 班级, y = 分数, fill = 考试)) +
+  geom_boxplot() +
+  labs(title = "各班级期中与期末考试分数分布", x = "班级", y = "分数") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(hjust = 1)) + 
+  scale_x_discrete(labels = c("六年级11班" = "11班", "六年级13班" = "13班", "六年级14班" = "14班", "六年级9班" = "9班"))
+ggsave("final.jpg",a)
+
