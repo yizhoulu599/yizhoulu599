@@ -1,0 +1,332 @@
+library(survival)
+library(KMsurv)
+library(survminer)
+library(tidyverse)
+library(ggplot2)
+library(coxphf)
+library(sjPlot)
+library(viridis)
+library(eha)
+library(SurvRegCensCov)
+library(compareGroups)
+library(ggplot2)
+library(ggpubr)
+library(timeROC)
+
+df <- read.csv("C:/Users/Lu/Desktop/survival analysis/new.csv")
+vis_miss(df)
+sapply(df,class)
+df$event <- as.factor(df$event)
+df$sex <- as.factor(df$sex)
+df$smoking <- as.factor(df$smoking)
+df$diabetes <- as.factor(df$diabetes)
+df$hypertension <- as.factor(df$hypertension)
+df$anaemia <- as.factor(df$anaemia)
+
+res <- descrTable(DEATH_EVENT~.,data=df)
+export2word(res,"final.doc")
+
+create_histogram <- function(data, var, binwidth = NULL) {
+  ggplot(data, aes_string(x = var, fill = var)) +
+    geom_histogram(binwidth = binwidth, color = "black") +  # Specifying edge color
+    theme_minimal() +
+    theme(legend.position = "none") +
+    scale_fill_distiller(palette = "YlOrRd", direction = 1)  # Sequential palette
+}
+
+# Apply the function to create each histogram
+g1 <- create_histogram(df, "age", binwidth = 5)
+g2 <- create_histogram(df, "creatinine_phosphokinase", binwidth = 100)
+g3 <- create_histogram(df, "ejection_fraction", binwidth = 5)
+g4 <- create_histogram(df, "platelets", binwidth = 10000)
+g5 <- create_histogram(df, "serum_creatinine", binwidth = 0.1)
+g6 <- create_histogram(df, "serum_sodium", binwidth = 1)
+
+
+a <- ggarrange(g1,g2,g3,g4,g5,g6, ncol = 3, nrow = 2)
+ggsave("ggplot2.jpg",plot=a)
+#Parametric regression models diagnostic plot by KM estimator
+
+KM<- survfit(Surv(time, DEATH_EVENT) ~1, data=df)
+summary(KM)
+KM$time
+KM$surv
+
+#weibull ditribution
+par(mfrow=c(2,2))
+plot(log(-log(KM$surv)) ~ log(KM$time))
+result.lm <- lm(log(-log(KM$surv)) ~ log(KM$time))
+abline(result.lm)
+
+lines(log(KM$time), log(-log(KM$surv)), type="l", col='blue', lwd=2)
+
+#log-logistic distribution
+plot(log(1/KM$surv -1) ~ log(KM$time))
+result.lm <- lm(log(1/KM$surv -1) ~ log(KM$time))
+abline(result.lm)
+
+lines(log(KM$time), log(1/KM$surv -1), type="l", col='red', lwd=2)
+
+
+#log-normal distribution
+
+plot(qnorm(1 - KM$surv) ~ log(KM$time))
+result.lm <- lm(qnorm(1 - KMS$surv)  ~ log(KM$time))
+abline(result.lm)
+lines(log(KM$time), qnorm(1 - KM$surv), type="l", col='red', lwd=2)
+
+#weibull
+model_weibull <- survreg(Surv(time,DEATH_EVENT) ~sex+smoking+diabetes+high_blood_pressure+anaemia+age+creatinine_phosphokinase+ejection_fraction+platelets+serum_creatinine+serum_sodium, dist="weibull", data=df)
+
+model_step <- step(model_weibull) # step model selection using AIC (find the model with min AIC)
+glance(model_step)
+tidy(model_step)
+
+# Based on weibull distribution-final model:time,DEATH_EVENT~high_blood_pressure+anaemia+age+creatinine_phosphokinase+ejection_fraction+serum_creatinine+serum_sodium 
+#reomve #reomve creatinine_phosphokinase since the very small HR=1
+model_final <- survreg(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium, dist="weibull", data=df)
+summary(model_final)
+#reomve creatinine_phosphokinase since the very small HR=1
+#get HR and 95% CI
+ConvertWeibull(model_final,conf.level = 0.95)
+concordance(model_final)# cindex=0.7292
+
+hr <- data.frame(study=c('high_blood_pressure
+', 'anaemia', 'age', 'ejection_fraction ', 'serum_creatinine', 'serum_sodium'),
+                 index=1:6,
+                 HR=c(1.63,1.50, 1.05,0.95,1.35,0.96),
+                 lower=c(1.07,0.99,1.03,0.93,1.18,0.91),
+                 upper=c(2.47,2.26,1.06,0.97,1.54,1.00))
+
+ggplot(data=hr, aes(y=index, x=HR, xmin=lower, xmax=upper)) +
+  geom_point() + 
+  geom_errorbarh(height=.1) +
+  scale_y_continuous(breaks=1:nrow(df), labels=df$study) +
+  labs(title='Hazard Ratio', x='HR', y = 'covariates') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic()
+
+#Semi-Parametric regression models-fit the null model to identify the form of a non-linear relationship
+#null model
+cox_null <-coxph(Surv(time,DEATH_EVENT) ~1,data=df, method='breslow')
+summary(cox_null)
+rr.0<- residuals(cox_null, type="martingale")
+attach(df)
+#Martigale residuals versus the covariates for the null model
+par(mfrow=c(1,2))
+boxplot(rr.0~ high_blood_pressure)
+title("Martingale residuals\nversus high_blood_pressure")
+
+boxplot(rr.0~anaemia)
+title("Martingale residuals\nversus anaemia")
+
+smoothSEcurve <- function(yy, xx) {
+  xx.list <- min(xx) + ((0:100)/100)*(max(xx) - min(xx))
+  yy.xx <- predict(loess(yy ~ xx), se=T,
+                   newdata=data.frame(xx=xx.list))
+  lines(yy.xx$fit ~ xx.list, lwd=2,col=2)
+  lines(yy.xx$fit -
+          qt(0.975, yy.xx$df)*yy.xx$se.fit ~ xx.list, lty=2,col=3)
+  lines(yy.xx$fit +
+          qt(0.975, yy.xx$df)*yy.xx$se.fit ~ xx.list, lty=2,col=3)
+}
+par(mfrow=c(3,2))
+
+plot(rr.0 ~ df$age )
+smoothSEcurve(rr.0, df$age)
+title("Martingale residuals\nversus age")
+
+plot(rr.0 ~ df$creatinine_phosphokinase )
+smoothSEcurve(rr.0, df$creatinine_phosphokinase)
+title("Martingale residuals\nversus creatinine_phosphokinase")
+
+plot(rr.0 ~ df$ejection_fraction )
+smoothSEcurve(rr.0, df$ejection_fraction)
+title("Martingale residuals\nversus ejection_fraction")
+
+plot(rr.0 ~ df$serum_creatinine )
+smoothSEcurve(rr.0, df$serum_creatinine)
+title("Martingale residuals\nversus serum_creatinine")
+
+plot(rr.0 ~ df$serum_sodium )
+smoothSEcurve(rr.0, df$serum_sodium)
+title("Martingale residuals\nversus serum_sodium")
+
+#schoenfeld
+COX.Mod<-coxph(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=df, method='breslow')
+res <- cox.zph(COX.Mod) # test for PH assumption 
+ggcoxzph(res,font.y = 8)  
+print(res)
+
+logcreatinine_phosphokinase<-log(df$creatinine_phosphokinase)
+logejection_fraction<-log(df$ejection_fraction)
+logplatelets<-log(df$platelets)
+logserum_creatinine<-log(df$serum_creatinine)
+logserum_sodium<-log(df$serum_sodium)
+logage<-log(df$age)
+cox_full <-coxph(Surv(time,DEATH_EVENT) ~sex+smoking+diabetes+high_blood_pressure+anaemia+logage+logcreatinine_phosphokinase+logejection_fraction+logplatelets+logserum_creatinine+ logserum_sodium,data=df, method='breslow')
+summary(cox_full)
+
+cox_step <- step(cox_full) # step 
+glance(cox_step)
+
+cox_final<-coxph(Surv(time,DEATH_EVENT) ~ high_blood_pressure+anaemia+logage+logserum_creatinine+logejection_fraction
+               ,data=df, method='breslow')
+ggforest(cox_final)
+
+concordance(cox_final) #c-index=0.7394
+#roc
+roc = timeROC::timeROC(
+  T = df$time,
+  delta = df$DEATH_EVENT,
+  marker = predict(cox_final, newdata = df, type = 'lp'), # risk scores
+  times = 4:285, # time range of interest
+  cause = 1 # the label of event
+)
+plot(roc, time=285)
+plot(roc, time=285)
+plot( # plot of time-dependent AUCs at times 1:100
+  x=4:285, y=roc$AUC,
+  xlab = 'Time', ylab = 'Time-dependent AUC',
+  type = 'l'
+)
+
+#test weibull aft and cox
+library(eha)
+weibull_reg<-phreg(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=df,dist='weibull')
+cox_reg<-coxreg(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=df)
+check.dist(weibull_reg,cox_reg)
+mtext("Cumulative hazard", side=2, line=3, cex.lab=1,las=3, col="black")
+
+###Schoenfeld residuals to Check for Non-Proportional Hazards
+
+fit.HF=COX.Mod<-coxph(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=HF, method='breslow')
+res <- cox.zph(fit.HF) # test for PH assumption 
+ggcoxzph(res,font.y = 8)  #  making the plots
+print(res)  # test for non-proportion hazards 
+
+## part c:case-deletion residuals(jackknife residuals) to identify any outlying points##
+#Model 1:coxph(Surv(time,DEATH_EVENT) ~ high_blood_pressure+anaemia+age+creatinine_phosphokinase+ejection_fraction+serum_creatinine+serum_sodium#
+var <- c("high_blood_pressure", "anaemia", "age","ejection_fraction","serum_creatinine","serum_sodium")
+attach(HF)
+result.coxph <-
+  coxph(Surv(time,DEATH_EVENT) ~ high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,
+        data = HF)
+# coef.all <- result.coxph$coef[m]
+# coef.all
+par(mfrow=c(3,2))
+for (m in 1:length(result.coxph$coef)) {
+  coef.all <- result.coxph$coef[m]
+  
+  n.obs <- length(time)
+  jkbeta.vec <- rep(NA, n.obs)
+  
+  for (i in 1:n.obs) {
+    time.i <- time[-i]
+    DEATH_EVENT.i <- DEATH_EVENT[-i]
+    high_blood_pressure.i <- high_blood_pressure[-i]
+    anaemia.i <-anaemia[-i]
+    age.i <- age[-i]
+    ejection_fraction.i <- ejection_fraction[-i]
+    serum_creatinine.i <- serum_creatinine[-i]
+    serum_sodium.i <- serum_sodium[-i]
+    result.coxph.i <- coxph(Surv(time.i, DEATH_EVENT.i) ~ high_blood_pressure.i+
+                              anaemia.i+ age.i+ejection_fraction.i+serum_creatinine.i+serum_sodium.i)
+    coef.i <- result.coxph.i$coef[m]
+    jkbeta.vec[i] <- (coef.all - coef.i)
+  }
+  print.default(jkbeta.vec)
+  # par(mfrow=c(2,2))
+  index.obs <- 1:n.obs
+  plot(
+    jkbeta.vec ~ index.obs,
+    type = "h",
+    xlab = "Observation",
+    ylab = paste0("Change in coefficient for ", var[m])
+    ,
+    cex.axis = 1.3,
+    cex.lab = 1.3
+  )
+  abline(h = 0)
+}
+
+#Predicted survival probability
+
+#For age
+fit=COX.Mod<-coxph(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=HF, method='breslow')
+ggadjustedcurves(fit, data=HF[which(HF$age == 51),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "age = 51")
+ggadjustedcurves(fit, data=HF[which(HF$age == 60),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "age = 60")
+ggadjustedcurves(fit, data=HF[which(HF$age == 70),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "age = 70")
+#For ejection_fraction
+fit=COX.Mod<-coxph(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=HF, method='breslow')
+ggadjustedcurves(fit, data=HF[which(HF$serum_creatinine == 30),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "ejection_fraction = 30")
+ggadjustedcurves(fit, data=HF[which(HF$ejection_fraction == 38),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "ejection_fraction = 38")
+ggadjustedcurves(fit, data=HF[which(HF$ejection_fraction ==45),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "ejection_fraction = 45")
+#For serum_creatinine
+fit=COX.Mod<-coxph(Surv(time,DEATH_EVENT) ~high_blood_pressure+anaemia+age+ejection_fraction+serum_creatinine+serum_sodium,data=HF, method='breslow')
+ggadjustedcurves(fit, data=HF[which(HF$serum_creatinine == 0.9),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "serum_creatinine = 0.9")
+ggadjustedcurves(fit, data=HF[which(HF$serum_creatinine == 1.1),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "serum_creatinine = 1.1")
+ggadjustedcurves(fit, data=HF[which(HF$serum_creatinine ==1.4),],
+                 method = "single",
+                 legend = "top",
+                 legend.title = "serum_creatinine = 1.4")
+
+# KM model for anaemia
+fitKM<- survfit(Surv(time, DEATH_EVENT) ~anaemia, data=HF)
+plot(fitKM, xlab="Time", ylab="Survival probability",col=c('red', 'blue'), lwd=2, lty=1)
+legend("topright", pch=19,
+       legend=c("anaemia=0", "anaemia=1"), col=c("red", "blue"))
+# Parametric model for anaemiabased on wibull 
+median(HF$age)
+creatinine_phosphokinase = median(HF$creatinine_phosphokinase)
+ejection_fraction = median(HF$ejection_fraction)
+serum_creatinine = median(HF$serum_creatinine)
+serum_sodium = median(HF$serum_sodium)
+
+lines(predict(modelFinal.pharm.weib, newdata=list(high_blood_pressure=1, 
+                                                  age = 60, 
+                                                  anaemia=1,
+                                                  ejection_fraction = 38,
+                                                  serum_creatinine = 1.1,
+                                                  serum_sodium = 137),
+              type="quantile",
+              p=seq(.01,.99,by=.01)),
+      seq(.99,.01,by=-.01),
+      col="blue")
+
+lines(predict(modelFinal.pharm.weib, newdata=list(high_blood_pressure=1, 
+                                                  age = 60, 
+                                                  anaemia=0,
+                                                  ejection_fraction = 38,
+                                                  serum_creatinine = 1.1,
+                                                  serum_sodium = 137),
+              type="quantile",
+              p=seq(.01,.99,by=.01)),
+      seq(.99,.01,by=-.01),
+      col="red")
+
+
